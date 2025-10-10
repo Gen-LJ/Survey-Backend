@@ -16,6 +16,12 @@ func RoleMiddleware(role string) gin.HandlerFunc {
 		}
 		user := u.(user.User)
 
+		// Allow admins to access any route
+		if user.Role == "admin" {
+			c.Next()
+			return
+		}
+
 		if user.Role != role {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 			return

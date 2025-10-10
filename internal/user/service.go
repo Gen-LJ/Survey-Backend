@@ -1,39 +1,52 @@
 package user
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
+
+	"survey-backend/pkg/jwt"
 
 	"golang.org/x/crypto/bcrypt"
-	"survey-backend/pkg/jwt"
 )
 
 func RegisterUser(name, email, password, role string) error {
-    // Hash the password
-    hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-    if err != nil {
-        return fmt.Errorf("failed to hash password: %w", err)
-    }
+	// Hash the password
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
 
-    // Check if user already exists
-    var existing User
-    err = FindUserByEmail(email, &existing)
-    if err == nil {
-        // User already exists
-        return fmt.Errorf("user with email %s already exists", email)
-    }
+	// Check if user already exists
+	var existing User
+	err = FindUserByEmail(email, &existing)
+	if err == nil {
+		// User already exists
+		return fmt.Errorf("user with email %s already exists", email)
+	}
 
-    // Create new user
-    newUser := User{
-        Name:     name,
-        Email:    email,
-        Password: string(hashed),
-        Role:     role,
-    }
+	if role == "admin" {
+		return fmt.Errorf("bro what @_@. you are a genious but i am better. xD")
+	}
 
-    return CreateUser(&newUser)
+	validRoles := map[string]bool{
+		"interviewer": true,
+		"respondent":  true,
+	}
+
+	if !validRoles[role] {
+		return fmt.Errorf("you can't register as this role: %s", role)
+	}
+
+	// Create new user
+	newUser := User{
+		Name:     name,
+		Email:    email,
+		Password: string(hashed),
+		Role:     role,
+	}
+
+	return CreateUser(&newUser)
 }
-
 
 func LoginUser(email, password string) (User, string, error) {
 	var user User
