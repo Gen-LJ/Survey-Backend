@@ -8,10 +8,10 @@ import (
 	"survey-backend/internal/category"
 	"survey-backend/internal/country"
 	"survey-backend/internal/region"
-	"survey-backend/internal/survey"
 	"survey-backend/internal/user"
 	"survey-backend/middleware"
 	"survey-backend/pkg/database"
+	"survey-backend/routes"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -35,7 +35,7 @@ func main() {
 		log.Fatal("Failed to seed countries:", err)
 	}
 	if err := region.SeedRegions(); err != nil {
-		log.Fatal("Failed to seed countries:", err)
+		log.Fatal("Failed to seed regions:", err)
 	}
 
 	// auth routes
@@ -46,18 +46,12 @@ func main() {
 	// protected routes
 	protected := r.Group("/")
 	protected.Use(middleware.AuthMiddleware())
-	{
-		//user
-		protected.GET("/me", user.GetUserHandler)
-		protected.GET("/survey/form", survey.GetCreateSurveyFormHandler)
-		protected.GET("/regions/:country_id", region.GetRegionsByCountryHandler)
-		protected.POST("/survey/create", survey.CreateSurveyHandler)
-		// add other protected routes here
-
-		//Admin
-		protected.POST("/country/toggle", country.ToggleCountryActiveHandler)
-
-	}
+	
+	// Attach role-based groups
+	routes.UserRoutes(protected)
+	routes.RespondentRoutes(protected)
+	routes.InterviewerRoutes(protected)
+	routes.AdminRoutes(protected)
 
 	port := os.Getenv("PORT")
 
