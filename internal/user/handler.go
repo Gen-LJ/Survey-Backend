@@ -20,7 +20,16 @@ func RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	err := RegisterUser(req.Name, req.Email, req.Password, req.Role)
+	newUser := User{
+		Name:      req.Name,
+		Email:     req.Email,
+		Password:  req.Password,
+		Role:      req.Role,
+		CountryID: req.CountryID,
+		RegionID:  req.RegionID,
+	}
+
+	err := RegisterUser(&newUser)
 	if err != nil {
 		// User already exists?
 		if strings.Contains(err.Error(), "already exists") {
@@ -33,7 +42,13 @@ func RegisterHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, r.OK(
-		userResponse.UserResponse{Name: req.Name, Email: req.Email, Role: req.Role, Points: 0},
+		userResponse.UserResponse{
+			Name:      req.Name,
+			Email:     req.Email,
+			Role:      req.Role,
+			Points:    0,
+			CountryID: req.CountryID,
+			RegionID:  req.RegionID},
 	))
 }
 

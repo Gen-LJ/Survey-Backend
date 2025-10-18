@@ -14,6 +14,8 @@ type User struct {
 	Role          string `json:"role"`
 	Points        uint   `json:"points"`
 	PendingPoints uint   `json:"pending_points"`
+	CountryID     uint   `json:"country_id"`
+	RegionID      uint   `json:"region_id"`
 }
 
 // Converts full User model to safe API response
@@ -22,7 +24,9 @@ func (u User) ToResponse() response.UserResponse {
 		Name:          u.Name,
 		Email:         u.Email,
 		Role:          u.Role,
-		Points:         u.Points,
+		Points:        u.Points,
 		PendingPoints: u.PendingPoints,
+		CountryID:     u.CountryID,
+		RegionID:      u.RegionID,
 	}
 }
