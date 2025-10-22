@@ -42,6 +42,7 @@ func main() {
 	r := gin.Default()
 	r.POST("/auth/register", user.RegisterHandler)
 	r.POST("/auth/login", user.LoginHandler)
+	r.GET("/auth/register-form",user.GetRegisterFormHandler)
 
 	// protected routes
 	protected := r.Group("/")

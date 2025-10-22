@@ -89,3 +89,15 @@ func GetUserHandler(c *gin.Context) {
 	c.JSON(http.StatusOK,
 		r.OK(currentUser.ToResponse()))
 }
+
+func GetRegisterFormHandler(c *gin.Context) {
+	r := &pkgResponse.Response[[]userResponse.CountryWithRegions]{}
+
+	response, err := GetRegisterForm()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, r.Fail(err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, r.OK(response))
+}

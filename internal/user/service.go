@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 
+	"survey-backend/internal/country"
 	"survey-backend/internal/region"
+	"survey-backend/internal/user/response"
 	"survey-backend/pkg/jwt"
 
 	"golang.org/x/crypto/bcrypt"
@@ -75,4 +77,44 @@ func LoginUser(email, password string) (User, string, error) {
 	token, _ := jwt.GenerateToken(email)
 
 	return user, token, nil
+}
+
+func GetRegisterForm() ([]response.CountryWithRegions, error) {
+	countries, err := country.FindActive()
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch active countries")
+	}
+
+	if len(countries) == 0 {
+		return nil, fmt.Errorf("no active country found")
+	}
+
+	var result []response.CountryWithRegions
+
+	for _, c := range countries {
+		regions, err := region.FindActiveByCountryID(c.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch regions for country %s:%w", c.Name, err)
+		}
+
+		var regionList []response.RegionBrief
+
+		for _, r := range regions {
+			regionList = append(regionList, response.RegionBrief{
+				ID:   r.ID,
+				Name: r.Name,
+				Code: r.Code,
+			})
+		}
+
+		result = append(result, response.CountryWithRegions{
+			ID:      c.ID,
+			Name:    c.Name,
+			Code:    c.Code,
+			Regions: regionList,
+		})
+
+	}
+
+	return result, nil
 }
