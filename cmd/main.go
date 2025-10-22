@@ -18,6 +18,9 @@ import (
 )
 
 func main() {
+
+	gin.SetMode(gin.ReleaseMode)
+
 	// .env
 	if err := godotenv.Load(); err != nil {
 		log.Fatal("Error Loading .env File")
@@ -42,12 +45,12 @@ func main() {
 	r := gin.Default()
 	r.POST("/auth/register", user.RegisterHandler)
 	r.POST("/auth/login", user.LoginHandler)
-	r.GET("/auth/register-form",user.GetRegisterFormHandler)
+	r.GET("/auth/register-form", user.GetRegisterFormHandler)
 
 	// protected routes
 	protected := r.Group("/")
 	protected.Use(middleware.AuthMiddleware())
-	
+
 	// Attach role-based groups
 	routes.UserRoutes(protected)
 	routes.RespondentRoutes(protected)
