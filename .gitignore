@@ -36,3 +36,6 @@ Thumbs.db
 # Logs
 # =========================
 *.log
+
+# Compiled local binary
+myapp

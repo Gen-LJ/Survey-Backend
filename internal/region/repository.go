@@ -6,6 +6,14 @@ import "survey-backend/pkg/database"
 func SeedRegions() error {
 	regions := GetAllRegions()
 
+	var count int64
+	if err := database.DB.Model(&Region{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count >= int64(len(regions)) {
+		return nil
+	}
+
 	for i := range regions {
 		region := regions[i]
 		result := database.DB.Where(Region{Name: region.Name, CountryID: region.CountryID}).FirstOrCreate(&region)

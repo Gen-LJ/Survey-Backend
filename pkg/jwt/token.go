@@ -3,32 +3,66 @@ package jwt
 import (
 	"errors"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func GenerateToken(email string) (string,error) {
-	secret := []byte(os.Getenv("JWT_SECRET"))
+// MinSecretLength is the shortest HS256 key worth accepting.
+const MinSecretLength = 32
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256,jwt.MapClaims{
-		"email": email,
-		"exp":   time.Now().Add(time.Hour * 24).Unix(),
-	})
+var ErrMissingSecret = errors.New("JWT_SECRET is not set")
 
-	return token.SignedString(secret)
+// TokenTTL is how long an issued token stays valid.
+var TokenTTL = 24 * time.Hour
+
+// secret reads the signing key, refusing an empty one. Without this an unset
+// JWT_SECRET would sign with a zero-length key, and every forged token would
+// then validate.
+func secret() ([]byte, error) {
+	value := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	if value == "" {
+		return nil, ErrMissingSecret
+	}
+
+	return []byte(value), nil
 }
 
+// CheckSecret reports whether a usable signing key is configured. Call it at
+// boot so a misconfigured deploy fails immediately instead of at first login.
+func CheckSecret() error {
+	_, err := secret()
+	return err
+}
+
+func GenerateToken(email string) (string, error) {
+	key, err := secret()
+	if err != nil {
+		return "", err
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"email": email,
+		"iat":   time.Now().Unix(),
+		"exp":   time.Now().Add(TokenTTL).Unix(),
+	})
+
+	return token.SignedString(key)
+}
 
 func ValidateToken(tokenStr string) (string, error) {
-	secret := []byte(os.Getenv("JWT_SECRET"))
+	key, err := secret()
+	if err != nil {
+		return "", err
+	}
 
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (any, error) {
 		// Ensure signing method is HMAC
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
-		return secret, nil
+		return key, nil
 	})
 
 	if err != nil {

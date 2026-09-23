@@ -5,6 +5,16 @@ import "survey-backend/pkg/database"
 func SeedCountries() error {
 	countries := GetAllCountries()
 
+	// Nearly 200 rows: without this guard every restart replays one query per
+	// country before the server can accept traffic.
+	var count int64
+	if err := database.DB.Model(&Country{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count >= int64(len(countries)) {
+		return nil
+	}
+
 	for i := range countries {
 		country := countries[i]
 		result := database.DB.Where(Country{Name: country.Name}).FirstOrCreate(&country)
