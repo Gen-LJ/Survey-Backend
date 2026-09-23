@@ -3,6 +3,8 @@ package database
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"survey-backend/pkg/config"
@@ -40,7 +42,12 @@ func ConnectDB() error {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?%s", user, password, host, port, dbName, params)
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
-		Logger: gormLogger.Default.LogMode(logLevel()),
+		Logger: newLogger(),
+		// TiDB and other MySQL-compatible engines handle foreign keys
+		// differently from MySQL, which can make AutoMigrate fail on the
+		// ON DELETE CASCADE constraints in the models. The cascades are
+		// belt-and-braces anyway: every child row is deleted explicitly in Go.
+		DisableForeignKeyConstraintWhenMigrating: config.Bool("DB_DISABLE_FK", false),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
@@ -69,6 +76,22 @@ func ConnectDB() error {
 	fmt.Println("Successfully connected to MySQL database")
 
 	return nil
+}
+
+// newLogger builds GORM's logger with "record not found" demoted. That error is
+// ordinary control flow here - checking an email is free, looking for the seeded
+// admin, a failed login - and GORM logs it at error level by default, which
+// would put a stack of noise in the platform's log stream on every signup.
+func newLogger() gormLogger.Interface {
+	return gormLogger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags),
+		gormLogger.Config{
+			SlowThreshold:             200 * time.Millisecond,
+			LogLevel:                  logLevel(),
+			IgnoreRecordNotFoundError: true,
+			Colorful:                  config.Get("APP_ENV", "development") != "production",
+		},
+	)
 }
 
 // logLevel keeps query logging quiet in production, where GORM's default

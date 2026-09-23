@@ -81,6 +81,9 @@ func main() {
 	if err := region.SeedRegions(); err != nil {
 		log.Fatal("Failed to seed regions:", err)
 	}
+	if err := user.SeedAdmin(); err != nil {
+		log.Fatal("Failed to seed admin:", err)
+	}
 
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())

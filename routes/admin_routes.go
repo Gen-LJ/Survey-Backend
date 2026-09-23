@@ -2,6 +2,7 @@ package routes
 
 import (
 	"survey-backend/internal/country"
+	"survey-backend/internal/user"
 	"survey-backend/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -13,4 +14,5 @@ func AdminRoutes(r *gin.RouterGroup) {
 	g.Use(middleware.RoleMiddleware("admin"))
 
 	g.POST("/country/toggle", country.ToggleCountryActiveHandler)
+	g.POST("/points/grant", user.GrantPointsHandler)
 }

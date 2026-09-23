@@ -78,6 +78,7 @@ func TestRoutesRegister(t *testing.T) {
 		"GET /respondent/completed",
 		"GET /respondent/completed/:id",
 		"POST /admin/country/toggle",
+		"POST /admin/points/grant",
 	}
 
 	registered := map[string]bool{}
@@ -101,6 +102,8 @@ func TestRoleGatesApply(t *testing.T) {
 		{"interviewer", http.MethodGet, "/respondent/home"},
 		{"interviewer", http.MethodPost, "/admin/country/toggle"},
 		{"respondent", http.MethodPost, "/admin/country/toggle"},
+		{"interviewer", http.MethodPost, "/admin/points/grant"},
+		{"respondent", http.MethodPost, "/admin/points/grant"},
 	}
 
 	for _, tc := range cases {

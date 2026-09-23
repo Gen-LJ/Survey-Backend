@@ -1,6 +1,7 @@
 package user
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -100,4 +101,26 @@ func GetRegisterFormHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, r.OK(response))
+}
+
+func GrantPointsHandler(c *gin.Context) {
+	r := &pkgResponse.Response[userResponse.UserResponse]{}
+
+	var req request.GrantPointsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, r.Fail(err.Error()))
+		return
+	}
+
+	updated, err := GrantPoints(req.Email, req.Points)
+	if err != nil {
+		if errors.Is(err, ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, r.Fail(err.Error()))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, r.Fail(err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, r.OK(updated.ToResponse()))
 }
