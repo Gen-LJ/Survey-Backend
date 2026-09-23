@@ -1,0 +1,1483 @@
+{
+  "info": {
+    "name": "Survey Spark API",
+    "description": "Go backend for Survey Spark. Run the Auth folder first, then Admin > Activate country.\n\nEach login stores its own token and the role folders pick the right one automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{interviewer_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://survey-backend-2934.onrender.com"
+    },
+    {
+      "key": "admin_email",
+      "value": ""
+    },
+    {
+      "key": "admin_password",
+      "value": ""
+    },
+    {
+      "key": "interviewer_email",
+      "value": "iva@example.com"
+    },
+    {
+      "key": "interviewer_password",
+      "value": "pw123456"
+    },
+    {
+      "key": "respondent_email",
+      "value": "ray@example.com"
+    },
+    {
+      "key": "respondent_password",
+      "value": "pw123456"
+    },
+    {
+      "key": "country_id",
+      "value": "119"
+    },
+    {
+      "key": "region_id",
+      "value": "1"
+    },
+    {
+      "key": "category_id",
+      "value": "1"
+    },
+    {
+      "key": "admin_token",
+      "value": ""
+    },
+    {
+      "key": "interviewer_token",
+      "value": ""
+    },
+    {
+      "key": "respondent_token",
+      "value": ""
+    },
+    {
+      "key": "survey_id",
+      "value": ""
+    },
+    {
+      "key": "question_id",
+      "value": ""
+    },
+    {
+      "key": "rating_question_id",
+      "value": ""
+    },
+    {
+      "key": "text_question_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1 \u00b7 Setup",
+      "description": "Run first, in order. A country must be active before registration works at all.",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "No auth, touches no database. Render's health check path.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Seeded from ADMIN_EMAIL / ADMIN_PASSWORD on boot.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (pm.response.code < 300 && body.success) {",
+                  "    pm.collectionVariables.set('admin_token', body.data.token);",
+                  "    console.log('admin_token =', pm.collectionVariables.get('admin_token'));",
+                  "}",
+                  "pm.test('succeeded', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Activate country",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/country/toggle",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "country",
+                "toggle"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": {{country_id}},\n  \"active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Every country seeds inactive, so /auth/register-form 500s until one is activated."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2 \u00b7 Auth",
+      "description": "Registration needs an active country from step 1.",
+      "item": [
+        {
+          "name": "Register form",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/register-form",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register-form"
+              ]
+            },
+            "description": "Active countries with their regions. Returns 500 while no country is active.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register interviewer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Iva\",\n  \"email\": \"{{interviewer_email}}\",\n  \"password\": \"{{interviewer_password}}\",\n  \"role\": \"interviewer\",\n  \"country_id\": {{country_id}},\n  \"region_id\": {{region_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "409 if the email is taken. `admin` is refused as a role.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('registered or already exists', () =>",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 409]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register respondent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ray\",\n  \"email\": \"{{respondent_email}}\",\n  \"password\": \"{{respondent_password}}\",\n  \"role\": \"respondent\",\n  \"country_id\": {{country_id}},\n  \"region_id\": {{region_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('registered or already exists', () =>",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 409]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login interviewer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{interviewer_email}}\",\n  \"password\": \"{{interviewer_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (pm.response.code < 300 && body.success) {",
+                  "    pm.collectionVariables.set('interviewer_token', body.data.token);",
+                  "    console.log('interviewer_token =', pm.collectionVariables.get('interviewer_token'));",
+                  "}",
+                  "pm.test('succeeded', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login respondent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{respondent_email}}\",\n  \"password\": \"{{respondent_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (pm.response.code < 300 && body.success) {",
+                  "    pm.collectionVariables.set('respondent_token', body.data.token);",
+                  "    console.log('respondent_token =', pm.collectionVariables.get('respondent_token'));",
+                  "}",
+                  "pm.test('succeeded', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3 \u00b7 Admin",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{admin_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "description": "Grant points before publishing: publishing escrows them and a new account has none.",
+      "item": [
+        {
+          "name": "Grant points",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/points/grant",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "points",
+                "grant"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{interviewer_email}}\",\n  \"points\": 1000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Additive. Points otherwise only leave the system (publishing spends them)."
+          },
+          "response": []
+        },
+        {
+          "name": "Activate country",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/country/toggle",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "country",
+                "toggle"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": {{country_id}},\n  \"active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Every country seeds inactive, so /auth/register-form 500s until one is activated."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4 \u00b7 Shared",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{interviewer_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Regions by country",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/regions/{{country_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "regions",
+                "{{country_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5 \u00b7 Interviewer",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{interviewer_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Home",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/interviewer/home",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "home"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create-survey form",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/form",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "form"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.success && b.data.category_list.length) {",
+                  "    pm.collectionVariables.set('category_id', b.data.category_list[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create survey",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/create",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Commute habits\",\n  \"description\": \"How you travel to work\",\n  \"category_id\": {{category_id}},\n  \"country_id\": {{country_id}},\n  \"region_id\": {{region_id}},\n  \"minutes\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (pm.response.code < 300 && body.success) {",
+                  "    pm.collectionVariables.set('survey_id', body.data.id);",
+                  "    console.log('survey_id =', pm.collectionVariables.get('survey_id'));",
+                  "}",
+                  "pm.test('succeeded', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List surveys",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/list?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Add &state=draft (repeatable or comma separated) to filter."
+          },
+          "response": []
+        },
+        {
+          "name": "Survey count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/count?state=draft",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "count"
+              ],
+              "query": [
+                {
+                  "key": "state",
+                  "value": "draft"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get survey",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/{{survey_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "{{survey_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Edit survey info",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/{{survey_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "{{survey_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Commute habits 2026\",\n  \"description\": \"Updated\",\n  \"minutes\": 5,\n  \"category_id\": {{category_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add question \u00b7 multiple choice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/{{survey_id}}/questions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "{{survey_id}}",
+                "questions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"How do you commute?\",\n  \"question_type\": \"multiple_choice\",\n  \"allow_multi_answer\": false,\n  \"options\": [\n    \"Bus\",\n    \"Bike\",\n    \"Car\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (pm.response.code < 300 && body.success) {",
+                  "    pm.collectionVariables.set('question_id', body.data.id);",
+                  "    console.log('question_id =', pm.collectionVariables.get('question_id'));",
+                  "}",
+                  "pm.test('succeeded', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add question \u00b7 rating",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/{{survey_id}}/questions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "{{survey_id}}",
+                "questions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Rate your commute\",\n  \"question_type\": \"rating\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (pm.response.code < 300 && body.success) {",
+                  "    pm.collectionVariables.set('rating_question_id', body.data.id);",
+                  "    console.log('rating_question_id =', pm.collectionVariables.get('rating_question_id'));",
+                  "}",
+                  "pm.test('succeeded', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add question \u00b7 text input",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/{{survey_id}}/questions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "{{survey_id}}",
+                "questions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Any comments?\",\n  \"question_type\": \"text_input\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (pm.response.code < 300 && body.success) {",
+                  "    pm.collectionVariables.set('text_question_id', body.data.id);",
+                  "    console.log('text_question_id =', pm.collectionVariables.get('text_question_id'));",
+                  "}",
+                  "pm.test('succeeded', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List questions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/{{survey_id}}/questions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "{{survey_id}}",
+                "questions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Edit question",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/{{survey_id}}/questions/{{question_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "{{survey_id}}",
+                "questions",
+                "{{question_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Which way do you commute?\",\n  \"options\": [\n    \"Bus\",\n    \"Bike\",\n    \"Car\",\n    \"Train\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Omit `options` to leave the choices untouched."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete question",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/{{survey_id}}/questions/{{text_question_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "{{survey_id}}",
+                "questions",
+                "{{text_question_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Publish survey",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/{{survey_id}}/publish",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "{{survey_id}}",
+                "publish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_answer_counts\": 2,\n  \"points_per_answer\": 50\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Escrows counts x per-answer from the creator. 409 if unaffordable, 400 with no questions."
+          },
+          "response": []
+        },
+        {
+          "name": "Pause survey",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/{{survey_id}}/pause",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "{{survey_id}}",
+                "pause"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paused\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Resume survey",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/{{survey_id}}/pause",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "{{survey_id}}",
+                "pause"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paused\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/{{survey_id}}/analytics",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "{{survey_id}}",
+                "analytics"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Completed surveys",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/interviewer/completed?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "completed"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6 \u00b7 Respondent",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{respondent_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Home",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/respondent/home",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "respondent",
+                "home"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Available surveys",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/respondent/survey/list?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "respondent",
+                "survey",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Only published, unfilled surveys matching the respondent's own country_id AND region_id, excluding ones they answered."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.success && b.data.items.length) {",
+                  "    pm.collectionVariables.set('survey_id', b.data.items[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Survey detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/respondent/survey/{{survey_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "respondent",
+                "survey",
+                "{{survey_id}}"
+              ]
+            },
+            "description": "409 if closed or already answered."
+          },
+          "response": []
+        },
+        {
+          "name": "Answer count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/respondent/survey/{{survey_id}}/answer-count",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "respondent",
+                "survey",
+                "{{survey_id}}",
+                "answer-count"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Save survey",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/respondent/saved/{{survey_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "respondent",
+                "saved",
+                "{{survey_id}}"
+              ]
+            },
+            "description": "Max 5 saved; 409 beyond that."
+          },
+          "response": []
+        },
+        {
+          "name": "Saved ids",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/respondent/saved-ids",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "respondent",
+                "saved-ids"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Saved surveys",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/respondent/saved",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "respondent",
+                "saved"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove saved survey",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/respondent/saved/{{survey_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "respondent",
+                "saved",
+                "{{survey_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit answer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/respondent/survey/{{survey_id}}/answer",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "respondent",
+                "survey",
+                "{{survey_id}}",
+                "answer"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"question_id\": {{question_id}},\n      \"responses\": [\n        \"Bus\"\n      ]\n    },\n    {\n      \"question_id\": {{rating_question_id}},\n      \"responses\": [\n        \"4\"\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Every question in the survey must appear exactly once. responses is always an array of strings."
+          },
+          "response": []
+        },
+        {
+          "name": "Completed surveys",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/respondent/completed?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "respondent",
+                "completed"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Add &sort=last_modified to sort by survey activity instead of when you answered."
+          },
+          "response": []
+        },
+        {
+          "name": "Answer details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/respondent/completed/{{survey_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "respondent",
+                "completed",
+                "{{survey_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7 \u00b7 Cleanup",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{interviewer_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "description": "Destructive. Kept out of the main flow so a full run does not delete the survey the Respondent folder needs.",
+      "item": [
+        {
+          "name": "Delete survey",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/interviewer/survey/{{survey_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "interviewer",
+                "survey",
+                "{{survey_id}}"
+              ]
+            },
+            "description": "Refunds the remaining escrow and removes questions, answers and saved entries."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
