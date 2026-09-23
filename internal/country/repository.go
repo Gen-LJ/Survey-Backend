@@ -60,3 +60,24 @@ func FindFiltered(active *bool) ([]Country, error) {
 	result := query.Find(&countries)
 	return countries, result.Error
 }
+
+// FindByCodes resolves ISO codes to countries in one query, keyed by code.
+// Seeding uses this instead of hardcoded ids: ids are assigned by the database
+// at insert time and differ between engines.
+func FindByCodes(codes []string) (map[string]Country, error) {
+	found := make(map[string]Country, len(codes))
+	if len(codes) == 0 {
+		return found, nil
+	}
+
+	var countries []Country
+	if err := database.DB.Where("code IN ?", codes).Find(&countries).Error; err != nil {
+		return nil, err
+	}
+
+	for _, c := range countries {
+		found[c.Code] = c
+	}
+
+	return found, nil
+}
