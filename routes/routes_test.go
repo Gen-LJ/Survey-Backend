@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"survey-backend/middleware"
+
 	"survey-backend/internal/user"
 	"survey-backend/routes"
 
@@ -19,6 +21,8 @@ func buildRouter(role string) *gin.Engine {
 
 	r := gin.New()
 	r.Use(gin.Recovery())
+
+	routes.PublicRoutes(r.Group("/"))
 
 	protected := r.Group("/")
 	protected.Use(func(c *gin.Context) {
@@ -49,6 +53,9 @@ func TestRoutesRegister(t *testing.T) {
 
 	want := []string{
 		"GET /me",
+		"POST /auth/register",
+		"POST /auth/login",
+		"GET /auth/register-form",
 		"GET /regions/:country_id",
 		"GET /interviewer/home",
 		"GET /interviewer/completed",
@@ -77,6 +84,7 @@ func TestRoutesRegister(t *testing.T) {
 		"DELETE /respondent/saved/:id",
 		"GET /respondent/completed",
 		"GET /respondent/completed/:id",
+		"GET /admin/country/list",
 		"POST /admin/country/toggle",
 		"POST /admin/points/grant",
 	}
@@ -100,6 +108,8 @@ func TestRoleGatesApply(t *testing.T) {
 	}{
 		{"respondent", http.MethodGet, "/interviewer/home"},
 		{"interviewer", http.MethodGet, "/respondent/home"},
+		{"interviewer", http.MethodGet, "/admin/country/list"},
+		{"respondent", http.MethodGet, "/admin/country/list"},
 		{"interviewer", http.MethodPost, "/admin/country/toggle"},
 		{"respondent", http.MethodPost, "/admin/country/toggle"},
 		{"interviewer", http.MethodPost, "/admin/points/grant"},
@@ -146,6 +156,66 @@ func TestAdminReachesEveryGroup(t *testing.T) {
 	for _, path := range []string{"/interviewer/home", "/respondent/home"} {
 		if got := status(t, buildRouter("admin"), http.MethodGet, path); got == http.StatusForbidden {
 			t.Errorf("%s as admin: got 403, want the request to pass the role gate", path)
+		}
+	}
+}
+
+// buildAuthRouter wires the real auth middleware, mirroring cmd/main.go: the
+// public group is registered outside it, the rest behind it.
+func buildAuthRouter() *gin.Engine {
+	gin.SetMode(gin.TestMode)
+
+	r := gin.New()
+	r.Use(gin.Recovery())
+
+	routes.PublicRoutes(r.Group("/"))
+
+	protected := r.Group("/")
+	protected.Use(middleware.AuthMiddleware())
+	routes.UserRoutes(protected)
+	routes.RespondentRoutes(protected)
+	routes.InterviewerRoutes(protected)
+	routes.AdminRoutes(protected)
+
+	return r
+}
+
+// TestPublicRoutesNeedNoToken guards the signup chicken-and-egg: a visitor needs
+// the country and region lists before they have an account, and gets both from
+// register-form, so that route must not sit behind the auth middleware.
+//
+// Without a token the middleware aborts with 401 before touching the database.
+// These requests instead reach their handler and fail on the nil test database,
+// which Recovery turns into a 500 - so anything other than 401 proves the route
+// is reachable unauthenticated.
+func TestPublicRoutesNeedNoToken(t *testing.T) {
+	r := buildAuthRouter()
+
+	for _, path := range []string{"/auth/register-form"} {
+		if got := status(t, r, http.MethodGet, path); got == http.StatusUnauthorized {
+			t.Errorf("%s: got 401, it must be reachable without a token", path)
+		}
+	}
+}
+
+// TestProtectedRoutesStillNeedAToken is the other half: moving the reference
+// data out must not have opened up anything else.
+func TestProtectedRoutesStillNeedAToken(t *testing.T) {
+	r := buildAuthRouter()
+
+	cases := []struct{ method, path string }{
+		{http.MethodGet, "/me"},
+		{http.MethodGet, "/regions/119"},
+		{http.MethodGet, "/interviewer/home"},
+		{http.MethodGet, "/respondent/home"},
+		{http.MethodGet, "/interviewer/survey/list"},
+		{http.MethodPost, "/admin/points/grant"},
+		{http.MethodGet, "/admin/country/list"},
+	}
+
+	for _, tc := range cases {
+		if got := status(t, r, tc.method, tc.path); got != http.StatusUnauthorized {
+			t.Errorf("%s %s: got %d, want 401", tc.method, tc.path, got)
 		}
 	}
 }

@@ -211,7 +211,7 @@
     },
     {
       "name": "2 \u00b7 Auth",
-      "description": "Registration needs an active country from step 1.",
+      "description": "Registration needs an active country from step 1. /auth/register-form is public and returns countries with their regions nested - everything the signup screen needs.",
       "item": [
         {
           "name": "Register form",
@@ -446,8 +446,67 @@
           }
         ]
       },
-      "description": "Grant points before publishing: publishing escrows them and a new account has none.",
+      "description": "Admin only. List countries to find an id, toggle one active, and grant points before publishing.",
       "item": [
+        {
+          "name": "List active countries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/country/list?active=true",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "country",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "active",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Admin only. Which countries the platform currently accepts, without opening the database."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('ok', () => pm.response.to.have.status(200));",
+                  "console.log('active countries:', b.data.map(c => c.id + ' ' + c.name).join(', '));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List all countries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/country/list",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "country",
+                "list"
+              ]
+            },
+            "description": "Every country with its active flag, name-sorted. Use this to find the id of one to activate. ?active=false narrows it to the inactive ones."
+          },
+          "response": []
+        },
         {
           "name": "Grant points",
           "request": {
@@ -562,11 +621,13 @@
                 "regions",
                 "{{country_id}}"
               ]
-            }
+            },
+            "description": "Authenticated. Signup reads its regions from /auth/register-form; this is for an account already in session."
           },
           "response": []
         }
-      ]
+      ],
+      "description": "Any signed-in role."
     },
     {
       "name": "5 \u00b7 Interviewer",

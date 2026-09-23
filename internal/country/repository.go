@@ -46,3 +46,17 @@ func BulkUpdateActive(ids []uint, active bool) error {
 	result := database.DB.Model(&Country{}).Where("id IN ?", ids).Update("active", active)
 	return result.Error
 }
+
+// FindFiltered returns countries, optionally narrowed to active or inactive.
+// A nil filter means every country.
+func FindFiltered(active *bool) ([]Country, error) {
+	var countries []Country
+
+	query := database.DB.Order("name asc")
+	if active != nil {
+		query = query.Where("active = ?", *active)
+	}
+
+	result := query.Find(&countries)
+	return countries, result.Error
+}

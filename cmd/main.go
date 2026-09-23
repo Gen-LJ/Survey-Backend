@@ -100,10 +100,8 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	// auth routes
-	r.POST("/auth/register", user.RegisterHandler)
-	r.POST("/auth/login", user.LoginHandler)
-	r.GET("/auth/register-form", user.GetRegisterFormHandler)
+	// public routes - no token required
+	routes.PublicRoutes(r.Group("/"))
 
 	// protected routes
 	protected := r.Group("/")

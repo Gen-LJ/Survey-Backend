@@ -14,6 +14,15 @@ type Country struct {
 }
 
 // GetAllCountries returns all countries for seeding
+func (c Country) ToAdminResponse() response.AdminCountryResponse {
+	return response.AdminCountryResponse{
+		ID:     c.ID,
+		Name:   c.Name,
+		Code:   c.Code,
+		Active: c.Active,
+	}
+}
+
 func GetAllCountries() []Country {
 	return []Country{
 		{Name: "Afghanistan", Code: "AFG"},
