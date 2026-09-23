@@ -6,4 +6,5 @@ type CreateSurveyRequest struct {
 	CategoryId  uint   `json:"category_id" binding:"required"`
 	CountryId   uint   `json:"country_id" binding:"required"`
 	RegionId    uint   `json:"region_id" binding:"required"`
+	Minutes     uint   `json:"minutes" binding:"required,min=1"`
 }

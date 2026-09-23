@@ -2,12 +2,15 @@ package routes
 
 import (
 	"survey-backend/internal/country"
+	"survey-backend/middleware"
 
 	"github.com/gin-gonic/gin"
-	"survey-backend/middleware"
 )
 
+// AdminRoutes registers platform administration endpoints.
 func AdminRoutes(r *gin.RouterGroup) {
-	r.Use(middleware.RoleMiddleware("admin"))
-	r.POST("/country/toggle", country.ToggleCountryActiveHandler)
+	g := r.Group("/admin")
+	g.Use(middleware.RoleMiddleware("admin"))
+
+	g.POST("/country/toggle", country.ToggleCountryActiveHandler)
 }

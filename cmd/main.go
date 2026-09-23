@@ -5,9 +5,13 @@ import (
 	"log"
 	"os"
 
+	"survey-backend/internal/answer"
 	"survey-backend/internal/category"
 	"survey-backend/internal/country"
+	"survey-backend/internal/question"
 	"survey-backend/internal/region"
+	"survey-backend/internal/savedsurvey"
+	"survey-backend/internal/survey"
 	"survey-backend/internal/user"
 	"survey-backend/middleware"
 	"survey-backend/pkg/database"
@@ -28,7 +32,20 @@ func main() {
 
 	// database
 	database.ConnectDB()
-	database.DB.AutoMigrate(&user.User{}, &category.Category{}, &country.Country{}, &region.Region{})
+	if err := database.DB.AutoMigrate(
+		&user.User{},
+		&category.Category{},
+		&country.Country{},
+		&region.Region{},
+		&survey.Survey{},
+		&question.Question{},
+		&question.Option{},
+		&answer.Answer{},
+		&answer.UserAnswer{},
+		&savedsurvey.SavedSurvey{},
+	); err != nil {
+		log.Fatal("Failed to migrate database:", err)
+	}
 
 	// seed
 	if err := category.SeedCategories(); err != nil {

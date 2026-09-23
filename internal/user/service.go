@@ -10,21 +10,19 @@ import (
 	"survey-backend/pkg/jwt"
 
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 func RegisterUser(u *User) error {
-	// Hash the password
-	hashed, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return fmt.Errorf("failed to hash password: %w", err)
-	}
-
-	// Check if user already exists
+	// Check if user already exists. Anything other than "not found" is a real
+	// database problem and must not be read as "the email is free".
 	var existing User
-	err = FindUserByEmail(u.Email, &existing)
+	err := FindUserByEmail(u.Email, &existing)
 	if err == nil {
-		// User already exists
 		return fmt.Errorf("user with email %s already exists", u.Email)
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("failed to look up user: %w", err)
 	}
 
 	regions, err := region.FindActiveByCountryID(u.CountryID)
@@ -58,6 +56,11 @@ func RegisterUser(u *User) error {
 		return fmt.Errorf("you can't register as this role: %s", u.Role)
 	}
 
+	// Hash the password only once the request is known to be valid.
+	hashed, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
 	u.Password = string(hashed)
 
 	return CreateUser(u)
@@ -74,7 +77,10 @@ func LoginUser(email, password string) (User, string, error) {
 		return User{}, "", errors.New("invalid credentials")
 	}
 
-	token, _ := jwt.GenerateToken(email)
+	token, err := jwt.GenerateToken(email)
+	if err != nil {
+		return User{}, "", fmt.Errorf("failed to issue token: %w", err)
+	}
 
 	return user, token, nil
 }
